@@ -30,7 +30,7 @@
 <body>
 
     <div class="toolbar">
-        <input type="text" id="url-input" value="https://example.com" class="address-bar" placeholder="URLを入力 (例: https://example.com)">
+        <input type="text" id="url-input" value="https://wikipedia.org" class="address-bar" placeholder="URLを入力 (例: https://wikipedia.org)">
         <button id="go-btn" class="btn">読み込み</button>
     </div>
 
@@ -45,8 +45,9 @@
     const contentArea = document.getElementById('content-area');
     const loader = document.getElementById('loader');
 
-    // 【修正済み】末尾に「/raw?url=」が正しく含まれるプロキシURL
-    const CORS_PROXY = "https://allorigins.win";
+    // 【修正済み】末尾に「/」を含めた正しいプロキシURL
+    // これにより「https://allorigins.win/https://...」の形で結合されます
+    const CORS_PROXY = "https://allorigins.win/";
 
     async function loadWebsite() {
         let targetUrl = urlInput.value.trim();
@@ -62,8 +63,9 @@
         loader.style.display = 'block';
 
         try {
-            // プロキシを経由して正しいURL構造でフェッチ
-            const response = await fetch(CORS_PROXY + encodeURIComponent(targetUrl));
+            // プロキシURLの後ろに、入力されたURLをそのまま結合してフェッチ
+            // パースエラーを防ぐため、今回はencodeURIComponentを使わずに結合します
+            const response = await fetch(CORS_PROXY + targetUrl);
             if (!response.ok) throw new Error('ページの取得に失敗しました。');
             
             const htmlText = await response.text();
