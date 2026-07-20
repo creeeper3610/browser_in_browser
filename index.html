@@ -45,30 +45,28 @@
     const contentArea = document.getElementById('content-area');
     const loader = document.getElementById('loader');
 
-    // 【修正済み】末尾に「/」を含めた正しいプロキシURL
-    // これにより「https://allorigins.win/https://...」の形で結合されます
-    const CORS_PROXY = "https://allorigins.win/";
+    // 【修正】AllOriginsの「JSONでラップして取得する」正しいAPIエンドポイント
+    const CORS_PROXY = "https://api.allorigins.win/get?url=";
 
     async function loadWebsite() {
         let targetUrl = urlInput.value.trim();
         
-        // URLの整形（httpやhttpsがない場合は自動補完）
         if (!/^https?:\/\//i.test(targetUrl)) {
             targetUrl = 'https://' + targetUrl;
         }
         urlInput.value = targetUrl;
 
-        // 画面のクリアとローディング表示
         contentArea.innerHTML = '';
         loader.style.display = 'block';
 
         try {
-            // プロキシURLの後ろに、入力されたURLをそのまま結合してフェッチ
-            // パースエラーを防ぐため、今回はencodeURIComponentを使わずに結合します
-            const response = await fetch(CORS_PROXY + targetUrl);
+            // URLを正しくエンコードしてプロキシにリクエストを送る
+            const response = await fetch(CORS_PROXY + encodeURIComponent(targetUrl));
             if (!response.ok) throw new Error('ページの取得に失敗しました。');
             
-            const htmlText = await response.text();
+            // AllOriginsの/getエンドポイントは、{ contents: "HTML文字列" } というJSONを返します
+            const json = await response.json();
+            const htmlText = json.contents;
 
             // 取得した文字列をHTML構造としてパース
             const parser = new DOMParser();
