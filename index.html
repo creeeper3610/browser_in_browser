@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>インブラウザ・デモ (iframe不使用版)</title>
+    <title>インブラウザ・デモ (GitHub Pages安定版)</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; background: #f0f2f5; }
@@ -45,8 +45,8 @@
     const contentArea = document.getElementById('content-area');
     const loader = document.getElementById('loader');
 
-    // 【修正】AllOriginsの「JSONでラップして取得する」正しいAPIエンドポイント
-    const CORS_PROXY = "https://api.allorigins.win/get?url=";
+    // 【修正】GitHub Pagesでも動作する、安定性の高い別のCORSプロキシサービスに変更
+    const CORS_PROXY = "https://corsproxy.io";
 
     async function loadWebsite() {
         let targetUrl = urlInput.value.trim();
@@ -60,13 +60,12 @@
         loader.style.display = 'block';
 
         try {
-            // URLを正しくエンコードしてプロキシにリクエストを送る
+            // 新しいプロキシURLと、エンコードしたターゲットURLを結合して直接フェッチ
             const response = await fetch(CORS_PROXY + encodeURIComponent(targetUrl));
             if (!response.ok) throw new Error('ページの取得に失敗しました。');
             
-            // AllOriginsの/getエンドポイントは、{ contents: "HTML文字列" } というJSONを返します
-            const json = await response.json();
-            const htmlText = json.contents;
+            // corsproxy.ioは生テキスト（HTML）をそのまま返すため、直接text()で受け取れます
+            const htmlText = await response.text();
 
             // 取得した文字列をHTML構造としてパース
             const parser = new DOMParser();
