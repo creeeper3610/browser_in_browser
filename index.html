@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; background: #f0f2f5; }
+    
+    /* ツールバーのスタイル */
+    .toolbar { display: flex; padding: 10px; background: #333; gap: 10px; align-items: center; }
+    .address-bar { flex-grow: 1; padding: 6px 12px; border: none; border-radius: 4px; font-size: 14px; }
+    .btn { background: #555; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 14px; }
+    .btn:hover { background: #777; }
+    
+    /* サイト描画エリア (iframeではない通常のdiv) */
+    .browser-viewport { 
+        flex-grow: 1; 
+        background: white; 
+        overflow-y: auto; 
+        padding: 20px;
+        position: relative;
+    }
+    
+    /* 読み込み中表示 */
+    .loader { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 18px; color: #666; }
+</style>
+</head>
+<body>
+
+    <div class="toolbar">
+        <input type="text" id="url-input" value="https://example.com" class="address-bar" placeholder="URLを入力 (例: https://example.com)">
+        <button id="go-btn" class="btn">読み込み</button>
+    </div>
+
+    <div class="browser-viewport" id="viewport">
+        <div id="loader" class="loader">読み込み中...</div>
+        <div id="content-area"><!-- ここにHTMLが注入されます --></div>
+    </div>
+
+<script>
+    const urlInput = document.getElementById('url-input');
+    const goBtn = document.getElementById('go-btn');
+    const contentArea = document.getElementById('content-area');
+    const loader = document.getElementById('loader');
+
+    // 無料のパブリックCORSプロキシ (URLの前に挟んでCORSエラーを回避する)
+    const CORS_PROXY = "https://allorigins.win";
+
+    async function loadWebsite() {
+        let targetUrl = urlInput.value.trim();
+        
+        // URLの整形
+        if (!/^https?:\/\//i.test(targetUrl)) {
+            targetUrl = 'https://' + targetUrl;
+        }
+        urlInput.value = targetUrl;
+
+        // 状態のリセット
+        contentArea.innerHTML = '';
+        loader.style.display = 'block';
+
+        try {
+            // CORSプロキシ経由で外部サイトのHTMLソース（テキスト）をフェッチ
+            const response = await fetch(CORS_PROXY + encodeURIComponent(targetUrl));
+            if (!response.ok) throw new Error('ページの取得に失敗しました。');
+            
+            const htmlText = await response.text();
+
+            // 取得したHTMLをDOM（パース可能なオブジェクト）に変換
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(htmlText, 'text/html');
+
+            // 外部サイト内の相対パス（画像やCSS）を絶対パスに書き換える処理
+            fixRelativePaths(doc, targetUrl);
+
+            // 表示エリアに外部サイトのbody内容をそのまま流し込む (iframe不使用)
+            contentArea.innerHTML = doc.body.innerHTML;
+
+            // 外部サイトのスタイル（CSS）を現在のページに適用させる
+            const styles = doc.querySelectorAll('style, link[rel="stylesheet"]');
+            styles.forEach(style => document.head.appendChild(style.cloneNode(true)));
+
+        } catch (error) {
+            contentArea.innerHTML = `<p style="color:red; padding:20px;">エラーが発生しました: ${error.message}</p>`;
+        } finally {
+            loader.style.display = 'none';
+        }
+    }
+
+    // 相対パスを絶対パスへ補正する関数
+    function fixRelativePaths(doc, baseUrl) {
+        const attributes = ['src', 'href'];
+        attributes.forEach(attr => {
+            doc.querySelectorAll(`[${attr}]`).forEach(el => {
+                const val = el.getAttribute(attr);
+                // 相対パス（/で始まる、またはhttpから始まらない）場合のみ変換
+                if (val && !/^https?:\/\//i.test(val) && !val.startsWith('data:')) {
+                    try {
+                        el.setAttribute(attr, new URL(val, baseUrl).href);
+                    } catch(e) {}
+                }
+            });
+        });
+    }
+
+    // イベントリスナー
+    goBtn.addEventListener('click', loadWebsite);
+    urlInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') loadWebsite(); });
+
+    // 初期読み込み
+    loadWebsite();
+</script>
+</body>
+</html>
