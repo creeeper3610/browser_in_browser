@@ -46,7 +46,7 @@
     const loader = document.getElementById('loader');
 
     // 【修正】GitHub Pagesでも動作する、安定性の高い別のCORSプロキシサービスに変更
-    const CORS_PROXY = "https://corsproxy.io";
+    const CORS_PROXY = "https://corsproxy.io/?url=";
 
     async function loadWebsite() {
         let targetUrl = urlInput.value.trim();
